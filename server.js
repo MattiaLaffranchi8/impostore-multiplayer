@@ -1,15 +1,17 @@
 // server.js - Backend del Gioco dell'Impostore
+const express = require('express');
+const app = express();
+
+const path = require('path'); // Questa riga è cruciale
+app.use(express.static(path.join(__dirname, '/'))); 
+
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
-const express = require('express');
-const http = require('http');
-const path = require('path');
-const { Server } = require("socket.io");
 
-const app = express();
-app.use(express.static(path.join(__dirname, '/')));
+const http = require('http'); // o 'https'
 const server = http.createServer(app);
+const { Server } = require("socket.io");
 
 // Configurazione Socket.IO: Permette la comunicazione in tempo reale
 // Cors: Permette al frontend (localhost:3000) di connettersi al backend (localhost:3000)
