@@ -1,11 +1,14 @@
 // server.js - Backend del Gioco dell'Impostore
-
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
 const express = require('express');
 const http = require('http');
 const path = require('path');
 const { Server } = require("socket.io");
 
 const app = express();
+app.use(express.static(path.join(__dirname, '/')));
 const server = http.createServer(app);
 
 // Configurazione Socket.IO: Permette la comunicazione in tempo reale
