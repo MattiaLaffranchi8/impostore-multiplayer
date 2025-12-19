@@ -228,6 +228,22 @@ io.on('connection', (socket) => {
         const room = rooms[data.roomCode];
         if (!room || room.state !== 'DISCUSSION') return;
         
+        //Troviamo chi è l'host nella lista giocatori
+        const host = room.players.find(p => p.isHost === true);
+
+        if (!host || host.id !== socket.id) {
+        console.log(`[SECURITY] Tentativo di voto non autorizzato da parte di ${socket.id}`);
+        return socket.emit('ERROR', { message: 'Solo l\'Host può avviare la votazione.' });
+    }
+    console.log(`[VOTE] L'Host ha avviato la votazione nella stanza ${roomCode}`);
+
+    if (room.timerInterval) {
+        clearInterval(room.timerInterval);
+        room.timerInterval = null;
+    }
+    room.state = 'VOTING';
+    io.to(roomCode).emit('PHASE_CHANGE', { phase: 'VOTING' });
+    
         // Simula la vittoria dei cittadini
         endGame(data.roomCode, 'Cittadini');
         console.log(`[END] Votazione richiesta in ${data.roomCode}. Fine simulata.`);

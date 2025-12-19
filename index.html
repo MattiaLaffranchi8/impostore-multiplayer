@@ -350,6 +350,10 @@
             
             <p style="font-style: italic; color: #999;">Cittadini: Votate per l'Impostore. Impostore: Rimanete nascosti.</p>
             <button id="btn-vota" style="margin-top: 30px;" aria-label="Avvia la votazione per l'impostore">RICHIESTA VOTAZIONE</button>
+            
+            <p id="info-host-voto" style="display: none; font-size: 0.8em; color: #777; margin-top: 10px;">* Solo l'Host può autorizzare la votazione
+    </p>
+
         </div>
 
         <div id="schermo-fine-gioco" class="schermo">
@@ -605,6 +609,11 @@
             } else if (data.phase === 'DISCUSSION') {
                 startDiscussionPhase();
                 showToast("Fase di discussione iniziata! Il tempo scorre...");
+            }else if (data.phase === 'VOTING') {
+                // Quando l'host preme il tasto, il server invia 'VOTING' a tutti
+                showToast("L'HOST HA AVVIATO LE VOTAZIONI!");
+                // Qui puoi chiamare la funzione per cambiare schermata alla votazione
+                // switchScreen('schermoVotazione'); 
             }
         }
         
@@ -773,8 +782,25 @@
             giocoElementi.parolaGioco.textContent = (gameState.myRole === 'Cittadino') 
                 ? gameState.parolaSegreta 
                 : 'PAROLA NON RILEVATA'; 
-            
-            giocoElementi.btnVota.onclick = handleStartVoting;
+            const btnVota = giocoElementi.btnVota;
+            const infoHost = document.getElementById('info-host-voto');
+            if (gameState.isHost) {
+                // Se sei l'host, il tasto è attivo
+                btnVota.disabled = false;
+                btnVota.style.opacity = "1";
+                btnVota.style.cursor = "pointer";
+                if(infoHost) infoHost.style.display = "none";
+                
+                btnVota.onclick = handleStartVoting;
+            } else {
+                // Se non sei l'host, il tasto è visibile ma disabilitato
+                btnVota.disabled = true;
+                btnVota.style.opacity = "0.5";
+                btnVota.style.cursor = "not-allowed";
+                if(infoHost) infoHost.style.display = "block";
+                
+                btnVota.onclick = null; // Impedisce il click
+            }
         }
         
         /** Avvia la votazione (richiesta al server). */
