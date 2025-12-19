@@ -27,6 +27,7 @@ app.use(express.static(path.join(__dirname)));
 
 // VARIABILI GLOBALI DEL GIOCO
 const rooms = {}; // Struttura: { codiceStanza: { parola, stato, players: [], timerInterval } }
+const votes={};
 const MAX_PLAYERS = 10;
 const MIN_PLAYERS = 3;
 
@@ -226,10 +227,11 @@ io.on('connection', (socket) => {
     // --- GIOCO: RICHIESTA FINE DISCUSSIONE (Votazione) ---
     socket.on('REQUEST_VOTE', (data) => {
         const room = rooms[data.roomCode];
+        const host = room.players.find(p => p.isHost);
         if (!room || room.state !== 'DISCUSSION') return;
-        
-        //Troviamo chi è l'host nella lista giocatori
-        const host = room.players.find(p => p.isHost === true);
+       
+        room.state = 'VOTING';
+        votes[data.roomCode] = {}
 
         if (!host || host.id !== socket.id) {
         console.log(`[SECURITY] Tentativo di voto non autorizzato da parte di ${socket.id}`);
@@ -242,12 +244,40 @@ io.on('connection', (socket) => {
         room.timerInterval = null;
     }
     room.state = 'VOTING';
-    io.to(roomCode).emit('PHASE_CHANGE', { phase: 'VOTING' });
-    
+    io.to(roomCode).emit('PHASE_CHANGE', { 
+        phase: 'VOTING',
+        numImpostori: room.numImpostori
+    });
         // Simula la vittoria dei cittadini
         endGame(data.roomCode, 'Cittadini');
         console.log(`[END] Votazione richiesta in ${data.roomCode}. Fine simulata.`);
     });
+
+    socket.on('SEND_VOTE', (data) => {
+    const { roomCode, targetId } = data;
+    const room = rooms[roomCode];
+    if (!room || room.state !== 'VOTING') return;
+
+    if (!votes[roomCode][targetId]) votes[roomCode][targetId] = 0;
+    votes[roomCode][targetId]++;
+
+    // Conta quanti voti totali sono stati espressi
+    const totalVotes = Object.values(votes[roomCode]).reduce((a, b) => a + b, 0);
+    
+    // Se tutti hanno votato (o è stato raggiunto il limite)
+    if (totalVotes >= room.players.length) {
+        // Determina chi ha ricevuto più voti
+        const sortedVotes = Object.entries(votes[roomCode]).sort((a, b) => b[1] - a[1]);
+        const mostVotedId = sortedVotes[0][0];
+        const mostVotedPlayer = room.players.find(p => p.id === mostVotedId);
+
+        // Calcola vittoria
+        let winningTeam = (mostVotedPlayer.ruolo === 'Impostore') ? 'Cittadini' : 'Impostori';
+        
+        endGame(roomCode, winningTeam);
+        delete votes[roomCode]; // Pulisci i voti
+    }
+});
 
 
     // --- DISCONNESSIONE ---

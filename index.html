@@ -356,6 +356,15 @@
 
         </div>
 
+        <div id="schermo-votazione" class="schermo">
+            <h2>TRIBUNALE DELL'EQUIPAGGIO</h2>
+            <p id="istruzioni-voto">Seleziona chi ritieni sia l'infiltrato:</p>
+            <div id="lista-voto-giocatori" style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+                </div>
+            <p id="voti-rimanenti" style="margin-top: 15px; font-size: 0.9em; color: #888;"></p>
+        </div>
+
+
         <div id="schermo-fine-gioco" class="schermo">
             <h2 id="risultato-finale" style="font-size: 3em;"></h2>
             <h3>RISULTATI IDENTITÀ FINALI:</h3>
@@ -604,19 +613,51 @@
         }
         
         function handlePhaseChange(data) {
-            if (data.phase === 'REVEAL') {
-                // Già gestito da GAME_START, ma utile per la sincronizzazione
-            } else if (data.phase === 'DISCUSSION') {
+            if (data.phase === 'DISCUSSION') {
                 startDiscussionPhase();
-                showToast("Fase di discussione iniziata! Il tempo scorre...");
-            }else if (data.phase === 'VOTING') {
-                // Quando l'host preme il tasto, il server invia 'VOTING' a tutti
-                showToast("L'HOST HA AVVIATO LE VOTAZIONI!");
-                // Qui puoi chiamare la funzione per cambiare schermata alla votazione
-                // switchScreen('schermoVotazione'); 
+            } else if (data.phase === 'VOTING') {
+                startVotingPhase(data.numImpostori);
             }
         }
         
+        function startVotingPhase(maxVoti) {
+            switchScreen('schermo-votazione');
+            const container = document.getElementById('lista-voto-giocatori');
+            container.innerHTML = '';
+    
+            let votiEffettuati = 0;
+            document.getElementById('voti-rimanenti').textContent = `Voti disponibili: ${maxVoti}`;
+
+            gameState.players.forEach(p => {
+        // Non puoi votare te stesso
+                if (p.id === gameState.myId) return;
+
+                const btn = document.createElement('button');
+                btn.textContent = p.nome;
+                btn.style.padding = "15px";
+                btn.onclick = () => {
+                    if (votiEffettuati < maxVoti) {
+                        btn.disabled = true;
+                        btn.style.backgroundColor = "#555";
+                        votiEffettuati++;
+                        document.getElementById('voti-rimanenti').textContent = `Voti disponibili: ${maxVoti - votiEffettuati}`;
+                
+                        sendToServer('SEND_VOTE', { 
+                            roomCode: gameState.roomCode, 
+                            targetId: p.id 
+                        });
+
+                        if (votiEffettuati === maxVoti) {
+                            showToast("Votazione completata. Attendi gli altri...");
+                            container.querySelectorAll('button').forEach(b => b.disabled = true);
+                        }
+                    }
+                };
+                container.appendChild(btn);
+            });
+        }
+
+
         function handleGameEnded(data) {
             // Il server ha stabilito la fine del gioco
             revealFinalResults(data.winningTeam, data.finalRoles);
