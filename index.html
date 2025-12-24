@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="it">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,7 +8,7 @@
     <meta name="description" content="Client multiplayer per il Gioco dell'Impostore. Si connette al server Socket.IO.">
 
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
-    
+
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
 
     <style>
@@ -15,8 +16,10 @@
         :root {
             --colore-sfondo-profondo: #0a0a1a;
             --colore-pannello: #1c1c3a;
-            --colore-accento-impostore: #ff3366; /* Neon Rosso */
-            --colore-accento-cittadino: #33ccff; /* Neon Blu */
+            --colore-accento-impostore: #ff3366;
+            /* Neon Rosso */
+            --colore-accento-cittadino: #33ccff;
+            /* Neon Blu */
             --colore-testo: #e0e0ff;
             --colore-bordo: #555588;
             --colore-ombra: rgba(0, 0, 0, 0.7);
@@ -78,7 +81,7 @@
             font-size: 1.8em;
             text-shadow: 0 0 5px rgba(51, 204, 255, 0.5);
         }
-        
+
         /* Layout per i pulsanti di Lobby */
         .lobby-buttons {
             display: flex;
@@ -88,7 +91,10 @@
         }
 
         /* Elementi di Input e Pulsanti */
-        select, input[type="text"], input[type="number"], button {
+        select,
+        input[type="text"],
+        input[type="number"],
+        button {
             padding: 12px 20px;
             border-radius: var(--raggio-bordo);
             border: 2px solid var(--colore-bordo);
@@ -101,7 +107,9 @@
             text-transform: uppercase;
         }
 
-        select, input[type="text"], input[type="number"] {
+        select,
+        input[type="text"],
+        input[type="number"] {
             width: 100%;
             max-width: 350px;
             text-align: center;
@@ -146,8 +154,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.98); 
-            backdrop-filter: blur(15px); 
+            background: rgba(0, 0, 0, 0.98);
+            backdrop-filter: blur(15px);
             -webkit-backdrop-filter: blur(15px);
             z-index: 1000;
             display: none;
@@ -162,7 +170,7 @@
             display: flex;
             opacity: 1;
         }
-        
+
         #contenuto-ruolo {
             max-width: 90%;
             width: 450px;
@@ -174,12 +182,19 @@
             animation: consoleScan 0.5s ease-out;
             text-align: center;
         }
-        
+
         @keyframes consoleScan {
-            from { transform: scale(0.9) translateY(20px); opacity: 0; }
-            to { transform: scale(1) translateY(0); opacity: 1; }
+            from {
+                transform: scale(0.9) translateY(20px);
+                opacity: 0;
+            }
+
+            to {
+                transform: scale(1) translateY(0);
+                opacity: 1;
+            }
         }
-        
+
         #ruolo-titolo {
             font-size: 3em;
             margin-bottom: 20px;
@@ -204,7 +219,7 @@
             display: inline-block;
             margin: 15px 0;
         }
-        
+
         /* Schermo Gioco (Discussione) */
         #parola-gioco {
             font-size: 3.5em;
@@ -215,8 +230,13 @@
         }
 
         @keyframes pulseText {
-            from { opacity: 0.8; }
-            to { opacity: 1; }
+            from {
+                opacity: 0.8;
+            }
+
+            to {
+                opacity: 1;
+            }
         }
 
         #timer-gioco {
@@ -230,7 +250,7 @@
             display: inline-block;
             box-shadow: 0 0 20px rgba(255, 51, 102, 0.5);
         }
-        
+
         /* Schermo Lobby */
         #lista-giocatori-lobby {
             list-style: none;
@@ -258,7 +278,7 @@
         .ruolo-cittadino {
             color: var(--colore-accento-cittadino);
         }
-        
+
         /* Toast Messages */
         #toast-container {
             position: fixed;
@@ -284,38 +304,53 @@
             opacity: 1;
             transform: translateX(0);
         }
-        
+
         /* Media query per la responsività */
         @media (max-width: 600px) {
-            h1 { font-size: 2em; }
-            h2 { font-size: 1.5em; }
-            #timer-gioco { font-size: 3em; }
-            .lobby-buttons { flex-direction: column; }
+            h1 {
+                font-size: 2em;
+            }
+
+            h2 {
+                font-size: 1.5em;
+            }
+
+            #timer-gioco {
+                font-size: 3em;
+            }
+
+            .lobby-buttons {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
+
 <body>
 
     <div id="app-container">
-        
+
         <div id="schermo-lobby" class="schermo attivo">
             <h1>THE IMPOSTOR GAME</h1>
             <p style="margin-bottom: 15px; color: #aaa;">Connesso a: <span id="server-status">localhost:3000</span></p>
 
             <div class="config-gruppo">
                 <h2>IDENTITÀ</h2>
-                <input type="text" id="input-nome-giocatore" placeholder="Inserisci il tuo Nickname" maxlength="20" aria-label="Nome giocatore">
+                <input type="text" id="input-nome-giocatore" placeholder="Inserisci il tuo Nickname" maxlength="20"
+                    aria-label="Nome giocatore">
             </div>
-            
+
             <div class="lobby-buttons">
-                <button id="btn-crea-stanza" style="background: var(--colore-accento-cittadino); box-shadow: 0 0 10px var(--colore-accento-cittadino);" aria-label="Crea una nuova stanza di gioco">CREA NUOVA STANZA</button>
+                <button id="btn-crea-stanza"
+                    style="background: var(--colore-accento-cittadino); box-shadow: 0 0 10px var(--colore-accento-cittadino);"
+                    aria-label="Crea una nuova stanza di gioco">CREA NUOVA STANZA</button>
                 <button id="btn-unisciti-stanza" aria-label="Unisciti a una stanza esistente">UNISCITI A STANZA</button>
             </div>
         </div>
 
         <div id="schermo-config-attesa" class="schermo">
             <h2>STANZA: <span id="codice-stanza-display">----</span></h2>
-            
+
             <p id="stato-giocatore-lobby" style="margin-bottom: 20px;">[ Seleziona l'opzione qui sotto ]</p>
 
             <div id="config-host-section" class="config-gruppo" style="display: none;">
@@ -323,7 +358,8 @@
                 <label for="num-impostori-host">Numero Impostori:</label>
                 <select id="num-impostori-host" aria-label="Seleziona il numero di impostori"></select>
                 <p>Giocatori Connessi: <span id="num-giocatori-connessi">0</span> / 10</p>
-                <button id="btn-inizia-gioco-host" disabled aria-label="Avvia la partita con i parametri scelti">AVVIA PROTOCOLLO GIOCO</button>
+                <button id="btn-inizia-gioco-host" disabled aria-label="Avvia la partita con i parametri scelti">AVVIA
+                    PROTOCOLLO GIOCO</button>
             </div>
 
             <div class="config-gruppo">
@@ -337,22 +373,27 @@
         <div id="schermo-rivelazione" class="schermo">
             <h2>Rivelazione Ruolo</h2>
             <p style="margin-bottom: 30px;">Verifica integrità file...</p>
-            <button id="btn-mostra-ruolo-personale" style="background: var(--colore-accento-cittadino); box-shadow: 0 0 15px var(--colore-accento-cittadino);" aria-label="Mostra il tuo ruolo segreto">MOSTRA RUOLO PERSONALE</button>
+            <button id="btn-mostra-ruolo-personale"
+                style="background: var(--colore-accento-cittadino); box-shadow: 0 0 15px var(--colore-accento-cittadino);"
+                aria-label="Mostra il tuo ruolo segreto">MOSTRA RUOLO PERSONALE</button>
         </div>
 
         <div id="schermo-gioco" class="schermo">
             <h2>FASE DI COMUNICAZIONE</h2>
             <p style="font-size: 1.1em; color: #aaa;">Parola di riferimento:</p>
             <p id="parola-gioco" aria-live="polite">IN ATTESA...</p>
-            
+
             <p style="margin-bottom: 10px;">Stato del timer:</p>
             <div id="timer-gioco" role="timer" aria-live="polite">05:00</div>
-            
-            <p style="font-style: italic; color: #999;">Cittadini: Votate per l'Impostore. Impostore: Rimanete nascosti.</p>
-            <button id="btn-vota" style="margin-top: 30px;" aria-label="Avvia la votazione per l'impostore">RICHIESTA VOTAZIONE</button>
-            
-            <p id="info-host-voto" style="display: none; font-size: 0.8em; color: #777; margin-top: 10px;">* Solo l'Host può autorizzare la votazione
-    </p>
+
+            <p style="font-style: italic; color: #999;">Cittadini: Votate per l'Impostore. Impostore: Rimanete nascosti.
+            </p>
+            <button id="btn-vota" style="margin-top: 30px;" aria-label="Avvia la votazione per l'impostore">RICHIESTA
+                VOTAZIONE</button>
+
+            <p id="info-host-voto" style="display: none; font-size: 0.8em; color: #777; margin-top: 10px;">* Solo l'Host
+                può autorizzare la votazione
+            </p>
 
         </div>
 
@@ -360,7 +401,7 @@
             <h2>TRIBUNALE DELL'EQUIPAGGIO</h2>
             <p id="istruzioni-voto">Seleziona chi ritieni sia l'infiltrato:</p>
             <div id="lista-voto-giocatori" style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
-                </div>
+            </div>
             <p id="voti-rimanenti" style="margin-top: 15px; font-size: 0.9em; color: #888;"></p>
         </div>
 
@@ -369,17 +410,21 @@
             <h2 id="risultato-finale" style="font-size: 3em;"></h2>
             <h3>RISULTATI IDENTITÀ FINALI:</h3>
             <ul id="lista-risultati" role="list"></ul>
-            <button id="btn-nuova-partita" style="margin-top: 30px;" aria-label="Torna alla lobby per una nuova partita">NUOVA PARTITA</button>
+            <button id="btn-nuova-partita" style="margin-top: 30px;"
+                aria-label="Torna alla lobby per una nuova partita">NUOVA PARTITA</button>
         </div>
 
     </div>
 
-    <div id="modal-codice-stanza" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 1500; align-items: center; justify-content: center;">
-        <div style="background: var(--colore-pannello); padding: 30px; border-radius: var(--raggio-bordo); border: 2px solid var(--colore-accento-cittadino); box-shadow: 0 0 20px var(--colore-accento-cittadino);">
+    <div id="modal-codice-stanza"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.9); z-index: 1500; align-items: center; justify-content: center;">
+        <div
+            style="background: var(--colore-pannello); padding: 30px; border-radius: var(--raggio-bordo); border: 2px solid var(--colore-accento-cittadino); box-shadow: 0 0 20px var(--colore-accento-cittadino);">
             <h3>INSERISCI CODICE STANZA</h3>
             <input type="text" id="input-codice-stanza" placeholder="XXXX" maxlength="4" style="margin: 15px 0;">
             <button id="btn-conferma-codice">CONFERMA</button>
-            <button id="btn-annulla-codice" style="background: none; border-color: var(--colore-accento-impostore);">ANNULLA</button>
+            <button id="btn-annulla-codice"
+                style="background: none; border-color: var(--colore-accento-impostore);">ANNULLA</button>
         </div>
     </div>
 
@@ -389,7 +434,8 @@
                 <h3 id="ruolo-titolo"></h3>
                 <p id="ruolo-messaggio" style="font-size: 1.1em; margin-bottom: 5px;"></p>
                 <p id="parola-rivelata"></p>
-                <button id="btn-chiudi-rivelazione" style="margin-top: 20px; background: var(--colore-accento-cittadino);">ACCETTA E PREPARATI</button>
+                <button id="btn-chiudi-rivelazione"
+                    style="margin-top: 20px; background: var(--colore-accento-cittadino);">ACCETTA E PREPARATI</button>
             </div>
         </div>
     </div>
@@ -403,26 +449,26 @@
 
         const gameState = {
             // Stato locale del giocatore che sta utilizzando questo browser
-            myId: null, 
+            myId: null,
             myName: '',
             myRole: null,
             isHost: false,
-            
+
             // Stato della Stanza (Sincronizzato dal server)
             roomCode: null,
             players: [], // Array di Giocatore
             parolaSegreta: null,
-            timer: 300, 
-            
+            timer: 300,
+
             // UI State
-            statoCorrente: 'lobby', 
+            statoCorrente: 'lobby',
         };
 
         // Indirizzo del server Socket.IO. Deve corrispondere all'indirizzo in cui Node.js è in esecuzione.
         // Se esegui Node.js sulla stessa macchina:
 
-        const WS_SERVER_URL= ""; 
-        
+        const WS_SERVER_URL = "";
+
         // Se pubblicherai il gioco:
         // const WS_SERVER_URL = "https://IL_TUO_DOMINIO.com"; 
 
@@ -435,6 +481,7 @@
             rivelazione: document.getElementById('schermo-rivelazione'),
             gioco: document.getElementById('schermo-gioco'),
             fine: document.getElementById('schermo-fine-gioco'),
+            votazione: document.getElementById('schermo-votazione'),
         };
 
         const lobbyElementi = {
@@ -446,7 +493,7 @@
             btnConfermaCodice: document.getElementById('btn-conferma-codice'),
             btnAnnullaCodice: document.getElementById('btn-annulla-codice'),
         };
-        
+
         const configElementi = {
             codiceDisplay: document.getElementById('codice-stanza-display'),
             statoGiocatore: document.getElementById('stato-giocatore-lobby'),
@@ -465,7 +512,7 @@
             parolaRivelata: document.getElementById('parola-rivelata'),
             btnChiudiRivelazione: document.getElementById('btn-chiudi-rivelazione'),
         };
-        
+
         const giocoElementi = {
             parolaGioco: document.getElementById('parola-gioco'),
             timerGioco: document.getElementById('timer-gioco'),
@@ -479,23 +526,42 @@
         };
 
         // --- Funzioni Utility ---
-        
+
         function switchScreen(nextScreenId) {
-            Object.values(schermate).forEach(screen => screen.classList.remove('attivo'));
+            // 1. Verifica se lo schermo esiste nell'oggetto schermate
+            if (!schermate[nextScreenId]) {
+                console.error("Errore: Lo schermo '" + nextScreenId + "' non esiste!");
+                return; // Esci dalla funzione per non rompere il gioco
+            }
+
+            // 2. Rimuovi la classe 'attivo' da tutti gli schermi
+            Object.values(schermate).forEach(screen => {
+                if (screen) screen.classList.remove('attivo');
+            });
+
+            // 3. Mostra lo schermo richiesto
             schermate[nextScreenId].classList.add('attivo');
+
+            // 4. Aggiorna lo stato interno
             gameState.statoCorrente = nextScreenId;
-            rivelazioneElementi.overlayRuoli.classList.remove('attivo');
-            rivelazioneElementi.overlayRuoli.style.display = 'none';
-            window.scrollTo(0, 0); 
+
+            // 5. Nascondi l'overlay dei ruoli (se presente)
+            if (rivelazioneElementi.overlayRuoli) {
+                rivelazioneElementi.overlayRuoli.classList.remove('attivo');
+                rivelazioneElementi.overlayRuoli.style.display = 'none';
+            }
+
+            // 6. Torna in alto nella pagina
+            window.scrollTo(0, 0);
         }
-        
+
         function showToast(message) {
             const toastContainer = document.getElementById('toast-container');
             const toast = document.createElement('div');
             toast.className = 'toast';
             toast.textContent = message;
             toastContainer.appendChild(toast);
-            
+
             setTimeout(() => { toast.classList.add('show'); }, 10);
             setTimeout(() => {
                 toast.classList.remove('show');
@@ -515,14 +581,14 @@
             const displaySecondi = String(secondi).padStart(2, '0');
             giocoElementi.timerGioco.textContent = `${displayMinuti}:${displaySecondi}`;
         }
-        
+
         // --- LOGICA DI CONNESSIONE SOCKET.IO ---
 
         /** Inizializza la connessione Socket.IO. */
         function initializeWebSocket() {
             // Usa Socket.IO, con opzione per tentare la riconnessione automatica
             ws = io(WS_SERVER_URL, { reconnection: true, reconnectionAttempts: 5 });
-            
+
             ws.on('connect', () => {
                 gameState.myId = ws.id;
                 showToast("Connessione SERVER stabilita.");
@@ -538,9 +604,9 @@
                 console.error("[WS] Errore di connessione Socket.IO:", error);
                 showToast("ERRORE: Impossibile connettersi. Server offline o URL errato.");
             });
-            
+
             // --- GESTIONE MESSAGGI DAL SERVER ---
-            
+
             ws.on('ROOM_CREATED', handleRoomCreated);
             ws.on('JOINED_ROOM', handleJoinedRoom);
             ws.on('PLAYER_UPDATE', handlePlayerUpdate);
@@ -554,22 +620,22 @@
         /** Invia un messaggio tramite Socket.IO. */
         function sendToServer(type, data = {}) {
             if (ws && ws.connected) {
-                ws.emit(type, data); 
+                ws.emit(type, data);
             } else {
                 showToast("Errore di rete. Riprova la connessione.");
             }
         }
-        
+
         // --- HANDLER DI MESSAGGI (DAL SERVER) ---
-        
+
         function handleServerError(message) {
             showToast(`ERRORE SERVER: ${message.message}`);
             // Se l'errore è grave (es. codice non valido), torna alla lobby
             if (gameState.statoCorrente !== 'lobby') {
-                 resetGame();
+                resetGame();
             }
         }
-        
+
         function handleRoomCreated(data) {
             gameState.roomCode = data.roomCode;
             gameState.myId = data.playerId;
@@ -596,62 +662,66 @@
                 setupHostControls(data.players.length);
             }
         }
-        
+
         function handleGameStart(data) {
             // Ricevuto il ruolo e la parola segreta
             gameState.parolaSegreta = data.word;
             gameState.myRole = data.role;
             gameState.players = data.players; // Lista finale dei giocatori con ruoli non rivelati
-            
+
             // Passa alla fase di rivelazione
-            startRoleRevealPhase(); 
+            startRoleRevealPhase();
         }
-        
+
         function handleSyncTimer(data) {
             gameState.timer = data.timeRemaining;
             updateTimerDisplay();
         }
-        
+
         function handlePhaseChange(data) {
             if (data.phase === 'DISCUSSION') {
                 startDiscussionPhase();
                 showToast("Discussione iniziata!");
             } else if (data.phase === 'VOTING') {
-                
+
                 startVotingPhase(data.numImpostori);
                 showToast("L'Host ha aperto le votazioni!");
             }
         }
-        
+
         function startVotingPhase(maxVoti) {
-            switchScreen('schermo-votazione');
+            // Nasconde tutti gli schermi e mostra quello della votazione
+            switchScreen('votazione');
+
             const container = document.getElementById('lista-voto-giocatori');
-            container.innerHTML = '';
-    
-            let votiEffettuati = 0;
-            document.getElementById('voti-rimanenti').textContent = `Voti disponibili: ${maxVoti}`;
+            const infoVoti = document.getElementById('voti-rimanenti');
+
+            container.innerHTML = ''; // Pulisce i vecchi bottoni
+            let votiContati = 0;
+            infoVoti.textContent = `Puoi votare ${maxVoti} persone`;
 
             gameState.players.forEach(p => {
-        // Non puoi votare te stesso
+                // Non votare se stessi
                 if (p.id === gameState.myId) return;
 
                 const btn = document.createElement('button');
                 btn.textContent = p.nome;
-                btn.style.padding = "15px";
+                btn.className = "btn-voto"; // Aggiungi questa classe al tuo CSS per farlo bello
                 btn.onclick = () => {
-                    if (votiEffettuati < maxVoti) {
+                    if (votiContati < maxVoti) {
+                        votiContati++;
                         btn.disabled = true;
                         btn.style.backgroundColor = "#555";
-                        votiEffettuati++;
-                        document.getElementById('voti-rimanenti').textContent = `Voti disponibili: ${maxVoti - votiEffettuati}`;
-                
-                        sendToServer('SEND_VOTE', { 
-                            roomCode: gameState.roomCode, 
-                            targetId: p.id 
+
+                        // Invia il voto al server
+                        sendToServer('SEND_VOTE', {
+                            roomCode: gameState.roomCode,
+                            targetId: p.id
                         });
 
-                        if (votiEffettuati === maxVoti) {
-                            showToast("Votazione completata. Attendi gli altri...");
+                        if (votiContati === maxVoti) {
+                            infoVoti.textContent = "Votazione inviata! Attendi gli altri...";
+                            // Disabilita tutti gli altri bottoni
                             container.querySelectorAll('button').forEach(b => b.disabled = true);
                         }
                     }
@@ -692,16 +762,16 @@
             }
 
             sendToServer('JOIN_ROOM', { playerName: gameState.myName, roomCode: code });
-            
+
             lobbyElementi.modalCodice.style.display = 'none';
             showToast(`Tentativo di unione alla stanza ${code}...`);
         }
-        
+
         function handleCancelCode() {
             lobbyElementi.modalCodice.style.display = 'none';
-            lobbyElementi.inputCodice.value = ''; 
+            lobbyElementi.inputCodice.value = '';
         }
-        
+
         /** Aggiorna la lista dei giocatori e le info sulla stanza. */
         function updateLobbyState(players, statusMessage) {
             gameState.players = players;
@@ -715,7 +785,7 @@
                 configElementi.listaGiocatori.innerHTML = '<li>Nessun giocatore connesso...</li>';
                 return;
             }
-            
+
             players.forEach(p => {
                 const li = document.createElement('li');
                 li.textContent = p.nome;
@@ -729,7 +799,7 @@
                 configElementi.listaGiocatori.appendChild(li);
             });
         }
-        
+
         /** Configura la UI per l'Host. */
         function setupHostControls(numPlayers) {
             if (!gameState.isHost) {
@@ -745,7 +815,7 @@
             for (let i = 1; i <= maxImpostori; i++) {
                 configElementi.numImpostoriHost.options.add(new Option(i, i));
             }
-            
+
             // Valida il pulsante Inizia
             const canStart = numPlayers >= 3;
             configElementi.btnInizia.disabled = !canStart;
@@ -771,25 +841,25 @@
         }
 
         // --- FASE DI RIVELAZIONE RUOLO ---
-        
+
         function startRoleRevealPhase() {
             switchScreen('rivelazione');
             rivelazioneElementi.btnMostraRuolo.onclick = showPersonalRole;
         }
-        
+
         function showPersonalRole() {
             rivelazioneElementi.btnMostraRuolo.style.display = 'none';
             rivelazioneElementi.overlayRuoli.style.display = 'flex';
-            
+
             // Animazione Glitch/Reveal
             setTimeout(() => {
                 rivelazioneElementi.overlayRuoli.classList.add('attivo');
                 revealRoleContent();
-            }, 100); 
+            }, 100);
 
             rivelazioneElementi.btnChiudiRivelazione.onclick = handleRoleAcceptance;
         }
-        
+
         function revealRoleContent() {
             // Reset classi
             rivelazioneElementi.ruoloTitolo.classList.remove('role-cittadino', 'role-impostore');
@@ -801,7 +871,7 @@
                 rivelazioneElementi.ruoloMessaggio.textContent = `Identità verificata. Chiave d'accesso:`;
                 rivelazioneElementi.parolaRivelata.textContent = gameState.parolaSegreta;
                 rivelazioneElementi.parolaRivelata.style.color = varToCss('--colore-accento-cittadino');
-            } else { 
+            } else {
                 rivelazioneElementi.ruoloTitolo.textContent = 'STATUS: IMPOSTORE';
                 rivelazioneElementi.ruoloTitolo.classList.add('role-impostore');
                 rivelazioneElementi.ruoloMessaggio.textContent = 'ATTENZIONE: Accesso negato. Nascondi la tua identità.';
@@ -809,7 +879,7 @@
                 rivelazioneElementi.parolaRivelata.style.color = varToCss('--colore-accento-impostore');
             }
         }
-        
+
         function handleRoleAcceptance() {
             rivelazioneElementi.overlayRuoli.classList.remove('attivo');
             // Nota: In un gioco reale invieresti ROLE_ACCEPTED al server, ma per semplicità
@@ -818,14 +888,14 @@
         }
 
         // --- FASE DI GIOCO (Discussione Sincronizzata) ---
-        
+
         function startDiscussionPhase() {
             switchScreen('gioco');
-            
+
             // Solo i cittadini vedono la parola reale, l'impostore vede un messaggio criptato
-            giocoElementi.parolaGioco.textContent = (gameState.myRole === 'Cittadino') 
-                ? gameState.parolaSegreta 
-                : 'PAROLA NON RILEVATA'; 
+            giocoElementi.parolaGioco.textContent = (gameState.myRole === 'Cittadino')
+                ? gameState.parolaSegreta
+                : 'PAROLA NON RILEVATA';
             const btnVota = giocoElementi.btnVota;
             const infoHost = document.getElementById('info-host-voto');
             if (gameState.isHost) {
@@ -833,20 +903,20 @@
                 btnVota.disabled = false;
                 btnVota.style.opacity = "1";
                 btnVota.style.cursor = "pointer";
-                if(infoHost) infoHost.style.display = "none";
-                
+                if (infoHost) infoHost.style.display = "none";
+
                 btnVota.onclick = handleStartVoting;
             } else {
                 // Se non sei l'host, il tasto è visibile ma disabilitato
                 btnVota.disabled = true;
                 btnVota.style.opacity = "0.5";
                 btnVota.style.cursor = "not-allowed";
-                if(infoHost) infoHost.style.display = "block";
-                
+                if (infoHost) infoHost.style.display = "block";
+
                 btnVota.onclick = null; // Impedisce il click
             }
         }
-        
+
         /** Avvia la votazione (richiesta al server). */
         function handleStartVoting() {
             sendToServer('REQUEST_VOTE', {
@@ -865,10 +935,10 @@
             finalRoles = finalRoles || gameState.players.map(p => ({ nome: p.nome, ruolo: p.ruolo }));
 
             fineElementi.risultatoFinale.textContent = `${winningTeam.toUpperCase()} VITTORIOSI!`;
-            fineElementi.risultatoFinale.style.color = (winningTeam === 'Cittadini') 
-                ? varToCss('--colore-accento-cittadino') 
+            fineElementi.risultatoFinale.style.color = (winningTeam === 'Cittadini')
+                ? varToCss('--colore-accento-cittadino')
                 : varToCss('--colore-accento-impostore');
-            
+
             fineElementi.listaRisultati.innerHTML = '';
             finalRoles.forEach(g => {
                 const li = document.createElement('li');
@@ -876,7 +946,7 @@
                 li.innerHTML = `<strong>${g.nome}</strong>: <span class="${ruoloClass}">${g.ruolo.toUpperCase()}</span>`;
                 fineElementi.listaRisultati.appendChild(li);
             });
-            
+
             fineElementi.btnNuovaPartita.onclick = resetGame;
         }
 
@@ -894,13 +964,13 @@
             if (!ws || !ws.connected) {
                 initializeWebSocket();
             }
-            
+
             // Pulisci l'interfaccia e torna alla lobby
             switchScreen('lobby');
         }
 
         // --- Inizializzazione ---
-        
+
         function init() {
             // 1. Inizializza i listener per la lobby
             lobbyElementi.btnCrea.onclick = handleCreateRoom;
@@ -909,15 +979,16 @@
             lobbyElementi.btnAnnullaCodice.onclick = handleCancelCode;
 
             // 2. Inizializza la connessione Socket.IO
-            initializeWebSocket(); 
-            
+            initializeWebSocket();
+
             // Pre-compila il nome per accelerare i test
             lobbyElementi.inputNome.value = "Giocatore_" + Math.floor(Math.random() * 999);
-            
+
             console.log("Applicazione Gioco dell'Impostore (Multiplayer Client) avviata.");
         }
 
         document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
+
 </html>
