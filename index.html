@@ -615,8 +615,11 @@
         function handlePhaseChange(data) {
             if (data.phase === 'DISCUSSION') {
                 startDiscussionPhase();
+                showToast("Discussione iniziata!");
             } else if (data.phase === 'VOTING') {
+                
                 startVotingPhase(data.numImpostori);
+                showToast("L'Host ha aperto le votazioni!");
             }
         }
         

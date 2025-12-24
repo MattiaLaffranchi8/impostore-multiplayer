@@ -226,31 +226,30 @@ io.on('connection', (socket) => {
 
     // --- GIOCO: RICHIESTA FINE DISCUSSIONE (Votazione) ---
     socket.on('REQUEST_VOTE', (data) => {
-        const room = rooms[data.roomCode];
-        const host = room.players.find(p => p.isHost);
+        const roomCode = data.roomCode;
+        const room = rooms[roomCode];
+
         if (!room || room.state !== 'DISCUSSION') return;
-       
+        // Controllo Host
+        const host = room.players.find(p => p.isHost);
+        if (!host || host.id !== socket.id) return;
+
+        // Ferma il timer
+        if (room.timerInterval) {
+            clearInterval(room.timerInterval);
+            room.timerInterval = null;
+        }
+
+        // CAMBIA STATO IN 'VOTING' (Invece di chiamare endGame)
         room.state = 'VOTING';
-        votes[data.roomCode] = {}
 
-        if (!host || host.id !== socket.id) {
-        console.log(`[SECURITY] Tentativo di voto non autorizzato da parte di ${socket.id}`);
-        return socket.emit('ERROR', { message: 'Solo l\'Host può avviare la votazione.' });
-    }
-    console.log(`[VOTE] L'Host ha avviato la votazione nella stanza ${roomCode}`);
-
-    if (room.timerInterval) {
-        clearInterval(room.timerInterval);
-        room.timerInterval = null;
-    }
-    room.state = 'VOTING';
-    io.to(roomCode).emit('PHASE_CHANGE', { 
-        phase: 'VOTING',
-        numImpostori: room.numImpostori
-    });
-        // Simula la vittoria dei cittadini
-        endGame(data.roomCode, 'Cittadini');
-        console.log(`[END] Votazione richiesta in ${data.roomCode}. Fine simulata.`);
+        console.log(`[VOTE] Iniziata votazione nella stanza ${roomCode}`);
+    
+        // Notifica a tutti la nuova fase e passa il numero di impostori
+        io.to(roomCode).emit('PHASE_CHANGE', { 
+            phase: 'VOTING',
+            numImpostori: room.numImpostori 
+        });
     });
 
     socket.on('SEND_VOTE', (data) => {
