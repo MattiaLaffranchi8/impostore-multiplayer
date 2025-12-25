@@ -689,6 +689,29 @@
             }
         }
 
+        // Riceve i risultati dal server dopo che tutti hanno votato
+        socket.on('VOTING_RESULTS', (data) => {
+            console.log("Risultati ricevuti:", data);
+
+            // 1. Messaggio a schermo (Toast o Alert)
+            const messaggio = `Il più votato è: ${data.targetName}\n` +
+                (data.isImpostor ? "✅ Era l'Impostore!" : "❌ Era un Cittadino!");
+
+            // Se hai una funzione showToast usa quella, altrimenti alert
+            if (typeof showToast === "function") {
+                showToast(messaggio, 5000);
+            } else {
+                alert(messaggio);
+            }
+
+            // 2. Opzionale: Mostra graficamente chi è stato votato nello schermo risultati
+            const infoRisultato = document.getElementById('testo-risultato-voto');
+            if (infoRisultato) {
+                infoRisultato.textContent = messaggio;
+                switchScreen('fine'); // O uno schermo specifico per i risultati
+            }
+        });
+
         function startVotingPhase(maxVoti) {
             // Nasconde tutti gli schermi e mostra quello della votazione
             switchScreen('votazione');

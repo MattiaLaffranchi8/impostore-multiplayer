@@ -3,7 +3,7 @@ const express = require('express');
 const app = express();
 
 const path = require('path'); // Questa riga è cruciale
-app.use(express.static(path.join(__dirname, '/'))); 
+app.use(express.static(path.join(__dirname, '/')));
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
@@ -27,7 +27,7 @@ app.use(express.static(path.join(__dirname)));
 
 // VARIABILI GLOBALI DEL GIOCO
 const rooms = {}; // Struttura: { codiceStanza: { parola, stato, players: [], timerInterval } }
-const votes={};
+const votes = {};
 const MAX_PLAYERS = 10;
 const MIN_PLAYERS = 3;
 
@@ -67,14 +67,14 @@ function initializeGame(room) {
     // 1. Scegli la parola segreta
     const randomIndex = Math.floor(Math.random() * parole.length);
     room.parola = parole[randomIndex].toUpperCase();
-    
+
     // 2. Assegna i ruoli
     const numPlayers = room.players.length;
     let ruoli = Array(numPlayers).fill('Cittadino');
     for (let i = 0; i < room.numImpostori; i++) {
         ruoli[i] = 'Impostore';
     }
-    
+
     // Mescola i ruoli
     for (let i = ruoli.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -97,14 +97,14 @@ function startRoomTimer(roomCode) {
 
     room.timerInterval = setInterval(() => {
         room.timer--;
-        
+
         // Sincronizza il timer con tutti i client ogni secondo
         io.to(roomCode).emit('SYNC_TIMER', { timeRemaining: room.timer });
 
         if (room.timer <= 0) {
             clearInterval(room.timerInterval);
             room.timerInterval = null;
-            
+
             // Forziamo la fine del gioco se il tempo scade
             endGame(roomCode, 'Impostori'); // Se il tempo finisce, vincono gli impostori (Simulazione)
         }
@@ -118,18 +118,43 @@ function endGame(roomCode, winningTeam) {
     room.state = 'ENDED';
 
     const finalRoles = room.players.map(p => ({ nome: p.nome, ruolo: p.ruolo }));
-    
+
     io.to(roomCode).emit('GAME_ENDED', {
         winningTeam: winningTeam,
         finalRoles: finalRoles
     });
-    
+
     // Resetta lo stato per permettere una nuova partita senza distruggere la stanza
     room.parola = '';
     room.numImpostori = 0;
     room.timer = 300;
 }
 
+function processVotes(roomCode) {
+    const room = rooms[roomCode];
+    if (!room) return;
+
+    // Logica per trovare chi ha più voti (semplificata)
+    let mostVotedId = null;
+    let maxVoti = 0;
+    for (const [id, count] of Object.entries(room.votes)) {
+        if (count > maxVoti) {
+            maxVoti = count;
+            mostVotedId = id;
+        }
+    }
+
+    const targetPlayer = room.players.find(p => p.id === mostVotedId);
+    
+    // Invece di resettare, manda i risultati a tutti
+    io.to(roomCode).emit('VOTING_RESULTS', {
+        targetName: targetPlayer ? targetPlayer.nome : "Nessuno",
+        isImpostor: targetPlayer ? targetPlayer.role === 'IMPOSTORE' : false
+    });
+
+    // IMPORTANTE: Non chiamare endGame() qui se vuoi che restino a vedere il risultato!
+    room.state = 'RESULTS'; 
+}
 
 // --- GESTIONE CONNESSIONI (SOCKET.IO) ---
 
@@ -164,14 +189,14 @@ io.on('connection', (socket) => {
     socket.on('JOIN_ROOM', (data) => {
         const roomCode = data.roomCode;
         const room = rooms[roomCode];
-        
+
         if (!room) return socket.emit('ERROR', { message: 'Codice stanza non valido.' });
         if (room.state !== 'LOBBY') return socket.emit('ERROR', { message: 'Il gioco è già iniziato.' });
         if (room.players.length >= MAX_PLAYERS) return socket.emit('ERROR', { message: 'Stanza piena.' });
         if (!data.playerName) return socket.emit('ERROR', { message: 'Nome giocatore richiesto.' });
 
         socket.join(roomCode);
-        
+
         // Aggiunge il giocatore alla stanza
         room.players.push({ id: socket.id, nome: data.playerName, isHost: false });
         console.log(`[JOIN] ${data.playerName} si è unito a ${roomCode}`);
@@ -186,17 +211,17 @@ io.on('connection', (socket) => {
         // Notifica tutti i client nella stanza (incluso il nuovo)
         io.to(roomCode).emit('PLAYER_UPDATE', { players: getPlayerList(roomCode) });
     });
-    
+
     // --- HOST: AVVIA GIOCO ---
     socket.on('START_GAME', (data) => {
         const roomCode = data.roomCode;
         const room = rooms[roomCode];
-        
+
         // Validazione Host e Giocatori
         const host = room.players.find(p => p.id === socket.id && p.isHost);
         if (!host) return socket.emit('ERROR', { message: 'Solo l\'Host può avviare il gioco.' });
         if (room.players.length < MIN_PLAYERS) return socket.emit('ERROR', { message: `Servono almeno ${MIN_PLAYERS} giocatori.` });
-        
+
         room.numImpostori = data.numImpostori;
         initializeGame(room);
         console.log(`[START] Gioco avviato in ${roomCode}. Parola: ${room.parola}`);
@@ -206,13 +231,13 @@ io.on('connection', (socket) => {
 
         // 2. Invia i dati segreti individualmente
         room.players.forEach(p => {
-            io.to(p.id).emit('GAME_START', { 
+            io.to(p.id).emit('GAME_START', {
                 word: p.ruolo === 'Cittadino' ? room.parola : 'CRITICO', // L'impostore riceve una parola fittizia 'CRITICO'
                 role: p.ruolo,
-                players: getPlayerList(roomCode) 
+                players: getPlayerList(roomCode)
             });
         });
-        
+
         // Avvia il timer (inizierà dopo la fase di rivelazione)
         // In un gioco più complesso, il timer parte dopo che tutti i giocatori hanno cliccato "Accetta Ruolo"
         // Per semplicità, lo facciamo partire subito
@@ -244,39 +269,55 @@ io.on('connection', (socket) => {
         room.state = 'VOTING';
 
         console.log(`[VOTE] Iniziata votazione nella stanza ${roomCode}`);
-    
+
         // Notifica a tutti la nuova fase e passa il numero di impostori
-        io.to(roomCode).emit('PHASE_CHANGE', { 
+        io.to(roomCode).emit('PHASE_CHANGE', {
             phase: 'VOTING',
-            numImpostori: room.numImpostori 
+            numImpostori: room.numImpostori
         });
     });
 
     socket.on('SEND_VOTE', (data) => {
-    const { roomCode, targetId } = data;
-    const room = rooms[roomCode];
-    if (!room || room.state !== 'VOTING') return;
+        const { roomCode, targetId } = data;
+        const room = rooms[roomCode];
 
-    if (!votes[roomCode][targetId]) votes[roomCode][targetId] = 0;
-    votes[roomCode][targetId]++;
+        // Sicurezza: controlla se la stanza esiste e se siamo in fase di voto
+        if (!room || room.state !== 'VOTING') return;
 
-    // Conta quanti voti totali sono stati espressi
-    const totalVotes = Object.values(votes[roomCode]).reduce((a, b) => a + b, 0);
-    
-    // Se tutti hanno votato (o è stato raggiunto il limite)
-    if (totalVotes >= room.players.length) {
-        // Determina chi ha ricevuto più voti
-        const sortedVotes = Object.entries(votes[roomCode]).sort((a, b) => b[1] - a[1]);
-        const mostVotedId = sortedVotes[0][0];
-        const mostVotedPlayer = room.players.find(p => p.id === mostVotedId);
+        // Inizializza l'oggetto voti per questa stanza se non esiste
+        if (!votes[roomCode]) votes[roomCode] = {};
 
-        // Calcola vittoria
-        let winningTeam = (mostVotedPlayer.ruolo === 'Impostore') ? 'Cittadini' : 'Impostori';
-        
-        endGame(roomCode, winningTeam);
-        delete votes[roomCode]; // Pulisci i voti
-    }
-});
+        // Registra il voto
+        votes[roomCode][targetId] = (votes[roomCode][targetId] || 0) + 1;
+
+        // Conta i voti totali ricevuti finora
+        const totalVotes = Object.values(votes[roomCode]).reduce((a, b) => a + b, 0);
+
+        // Se tutti i giocatori hanno votato
+        if (totalVotes >= room.players.length) {
+            const sortedVotes = Object.entries(votes[roomCode]).sort((a, b) => b[1] - a[1]);
+            const mostVotedId = sortedVotes[0][0];
+            const mostVotedPlayer = room.players.find(p => p.id === mostVotedId);
+
+            // Cambiamo lo stato della stanza invece di distruggerla subito
+            room.state = 'RESULTS';
+
+            // Invia i risultati a tutti senza resettare
+            io.to(roomCode).emit('VOTING_RESULTS', {
+                targetName: mostVotedPlayer ? mostVotedPlayer.nome : "Nessuno",
+                isImpostor: mostVotedPlayer ? (mostVotedPlayer.ruolo === 'Impostore') : false,
+                voti: votes[roomCode]
+            });
+
+            // Opzionale: Aspetta 5 secondi e poi termina o ricomincia
+            setTimeout(() => {
+                let winningTeam = (mostVotedPlayer && mostVotedPlayer.ruolo === 'Impostore') ? 'Cittadini' : 'Impostori';
+                endGame(roomCode, winningTeam);
+                delete votes[roomCode];
+            }, 5000); // 5000 millisecondi = 5 secondi di gloria/vergogna
+        }
+    });
+
 
 
     // --- DISCONNESSIONE ---
@@ -293,12 +334,12 @@ io.on('connection', (socket) => {
 
                 // Rimuovi il giocatore
                 rooms[code].players.splice(index, 1);
-                
+
                 // Gestione Host
                 if (rooms[code].players.length > 0 && index === 0) {
                     rooms[code].players[0].isHost = true; // Promuovi il prossimo in lista
                 }
-                
+
                 // Se la stanza è vuota, eliminala
                 if (rooms[code].players.length === 0) {
                     clearInterval(rooms[code].timerInterval);
@@ -311,7 +352,7 @@ io.on('connection', (socket) => {
                         io.to(rooms[code].players[0].id).emit('HOST_PROMOTED'); // Notifica il nuovo host (opzionale)
                     }
                 }
-                
+
                 console.log(`[DISC] ${playerName} disconnesso da ${roomCode}`);
                 break;
             }
