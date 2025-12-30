@@ -145,7 +145,7 @@ function processVotes(roomCode) {
     }
 
     const targetPlayer = room.players.find(p => p.id === mostVotedId);
-    
+
     // Invece di resettare, manda i risultati a tutti
     io.to(roomCode).emit('VOTING_RESULTS', {
         targetName: targetPlayer ? targetPlayer.nome : "Nessuno",
@@ -153,7 +153,7 @@ function processVotes(roomCode) {
     });
 
     // IMPORTANTE: Non chiamare endGame() qui se vuoi che restino a vedere il risultato!
-    room.state = 'RESULTS'; 
+    room.state = 'RESULTS';
 }
 
 // --- GESTIONE CONNESSIONI (SOCKET.IO) ---
@@ -171,7 +171,7 @@ io.on('connection', (socket) => {
             numImpostori: 0,
             state: 'LOBBY',
             timer: 300,
-            players: [{ id: socket.id, nome: data.playerName, isHost: true }],
+            players: [{ id: socket.id, nome: data.playerName, isHost: true, peerId: data.peerId }],
             timerInterval: null
         };
 
@@ -197,9 +197,23 @@ io.on('connection', (socket) => {
 
         socket.join(roomCode);
 
+        // 1. [MODIFICA] Aggiungiamo il peerId nell'oggetto giocatore
+        room.players.push({
+            id: socket.id,
+            nome: data.playerName,
+            isHost: false,
+            peerId: data.peerId // Salviamo l'ID audio ricevuto dal client
+        });
+
         // Aggiunge il giocatore alla stanza
         room.players.push({ id: socket.id, nome: data.playerName, isHost: false });
         console.log(`[JOIN] ${data.playerName} si è unito a ${roomCode}`);
+
+        socket.to(roomCode).emit('USER_CONNECTED', {
+            peerId: data.peerId,
+            nome: data.playerName,
+            socketId: socket.id
+        });
 
         // Invia la conferma al nuovo client
         socket.emit('JOINED_ROOM', {
@@ -354,6 +368,7 @@ io.on('connection', (socket) => {
                 }
 
                 console.log(`[DISC] ${playerName} disconnesso da ${roomCode}`);
+                io.emit('USER_DISCONNECTED', socket.id);
                 break;
             }
         }

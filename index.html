@@ -10,7 +10,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 
     <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
-
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         /* Variabili Globali e Tema Cyber Dark */
         :root {
@@ -305,6 +305,33 @@
             transform: translateX(0);
         }
 
+        #btn-parla {
+            width: 100%;
+            padding: 20px;
+            font-weight: bold;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+            /* Impedisce di selezionare il testo mentre tieni premuto */
+        }
+
+        .btn-audio-off {
+            background-color: #4a4a4a;
+            color: white;
+            box-shadow: 0 4px #222;
+        }
+
+        .btn-audio-on {
+            background-color: #ff4b4b;
+            /* Rosso acceso quando parli */
+            color: white;
+            transform: translateY(4px);
+            /* Effetto pressione */
+            box-shadow: 0 0 15px #ff4b4b;
+        }
+
         /* Media query per la responsività */
         @media (max-width: 600px) {
             h1 {
@@ -386,6 +413,10 @@
             <p style="margin-bottom: 10px;">Stato del timer:</p>
             <div id="timer-gioco" role="timer" aria-live="polite">05:00</div>
 
+            <div class="controlli-audio" style="margin: 20px 0;">
+                <button id="btn-parla" class="btn-audio-off">TENI PREMUTO PER PARLARE</button>
+            </div>
+
             <p style="font-style: italic; color: #999;">Cittadini: Votate per l'Impostore. Impostore: Rimanete nascosti.
             </p>
             <button id="btn-vota" style="margin-top: 30px;" aria-label="Avvia la votazione per l'impostore">RICHIESTA
@@ -441,9 +472,12 @@
     </div>
 
     <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
-   
-   <script>
-        const socket =io();
+
+    <script>
+        let myStream;
+        let myPeer;
+        let peers = {};
+        const socket = io();
         // --- CONFIGURAZIONE E STATO GLOBALE ---
 
         /** @typedef {Object} Giocatore */
@@ -606,6 +640,26 @@
                 showToast("ERRORE: Impossibile connettersi. Server offline o URL errato.");
             });
 
+            ws.on('USER_CONNECTED', data => {
+                console.log("Nuovo utente nel gioco, avvio chiamata audio a:", data.peerId);
+                // Chiamiamo solo se abbiamo il nostro microfono attivo
+                if (myStream && myPeer) {
+                    connectToNewUser(data.peerId, myStream);
+                }
+            });
+
+            // Quando un giocatore esce, chiudiamo il suo canale audio
+            ws.on('USER_DISCONNECTED', (peerId) => {
+                console.log("Utente disconnesso, chiudo audio:", peerId);
+                if (peers[peerId]) {
+                    peers[peerId].close();
+                    delete peers[peerId];
+                }
+                // Rimuove l'elemento audio dal sito
+                const audioEl = document.getElementById(`audio-${peerId}`);
+                if (audioEl) audioEl.remove();
+            });
+
             // --- GESTIONE MESSAGGI DAL SERVER ---
 
             ws.on('ROOM_CREATED', handleRoomCreated);
@@ -655,6 +709,24 @@
             setupHostControls(data.players.length); // Nasconderà l'interfaccia host
             switchScreen('configAttesa');
             showToast(`Unito alla stanza ${data.roomCode}.`);
+            if (data.players && data.players.length > 0) {
+                data.players.forEach(player => {
+                    // 1. Non chiamare te stesso
+                    // 2. Assicurati che il giocatore abbia un peerId
+                    // 3. Assicurati di non averlo già chiamato (controllo nell'oggetto peers)
+                    if (player.id !== gameState.myId && player.peerId && !peers[player.peerId]) {
+                        console.log(`Avvio chiamata audio verso: ${player.nome} (${player.peerId})`);
+
+                        // Usiamo la funzione connectToNewUser che abbiamo scritto prima
+                        if (myStream) {
+                            connectToNewUser(player.peerId, myStream);
+                        } else {
+                            console.warn("Impossibile avviare audio: myStream non ancora pronto.");
+                        }
+                    }
+                });
+            }
+
         }
 
         function handlePlayerUpdate(data) {
@@ -762,12 +834,17 @@
 
         // --- LOGICA DI LOBBY (Client-side) ---
 
-        function handleCreateRoom() {
+        async function handleCreateRoom() {
             gameState.myName = lobbyElementi.inputNome.value.trim();
             if (!gameState.myName) {
                 return showToast("Inserisci un nome valido.");
             }
-            sendToServer('CREATE_ROOM', { playerName: gameState.myName });
+
+            await initAudio(); // Inizializza l'audio prima di creare la stanza
+            sendToServer('CREATE_ROOM', {
+                playerName: gameState.myName,
+                peerId: window.myAudioId
+            });
             showToast("Richiesta di creazione stanza inviata...");
         }
 
@@ -779,13 +856,18 @@
             lobbyElementi.modalCodice.style.display = 'flex';
         }
 
-        function handleConfirmCode() {
+        async function handleConfirmCode() {
             const code = lobbyElementi.inputCodice.value.trim().toUpperCase();
+            gameState.myName = lobbyElementi.inputNome.value.trim();
             if (code.length !== 4) {
                 return showToast("Il codice deve essere di 4 caratteri.");
             }
-
-            sendToServer('JOIN_ROOM', { playerName: gameState.myName, roomCode: code });
+            await initAudio(); // Inizializza l'audio prima di unirsi alla stanza
+            sendToServer('JOIN_ROOM', {
+                playerName: gameState.myName,
+                roomCode: code,
+                peerId: window.myAudioId
+            });
 
             lobbyElementi.modalCodice.style.display = 'none';
             showToast(`Tentativo di unione alla stanza ${code}...`);
@@ -995,13 +1077,81 @@
 
         // --- Inizializzazione ---
 
-        function init() {
-            console.log("Socket caricato:", socket.id);           // 1. Inizializza i listener per la lobby
-            lobbyElementi.btnCrea.onclick = handleCreateRoom;
-            lobbyElementi.btnUnisciti.onclick = handleJoinRoomRequest;
-            lobbyElementi.btnConfermaCodice.onclick = handleConfirmCode;
-            lobbyElementi.btnAnnullaCodice.onclick = handleCancelCode;
+        async function initAudio() {
+            try {
+                const vincoliAudio = {
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    },
+                    video: false
+                };
 
+                // Chiedi il permesso per il microfono
+                myStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                myStream.getAudioTracks()[0].enabled = false;
+
+                console.log("Microfono configurato con riduzione eco");
+
+                // Inizializza PeerJS (lascia che il server di PeerJS ti dia un ID ID)
+                myPeer = new Peer();
+
+                myPeer.on('open', id => {
+                    console.log('Il mio ID audio è: ' + id);
+                    // Salva questo ID per inviarlo al server quando ti unisci a una stanza
+                    window.myAudioId = id;
+                });
+
+                // Gestisci le chiamate in entrata
+                myPeer.on('call', call => {
+                    call.answer(myStream); // Rispondi con il tuo audio
+                    const audio = document.createElement('audio');
+                    call.on('stream', userAudioStream => {
+                        addAudioStream(audio, userAudioStream);
+                    });
+                });
+
+            } catch (err) {
+                console.error("Errore accesso microfono:", err);
+                alert("Per parlare con gli altri, attiva il microfono!");
+            }
+        }
+
+        function addAudioStream(audio, stream) {
+            audio.srcObject = stream;
+            audio.addEventListener('loadedmetadata', () => {
+                audio.play();
+            });
+            document.body.append(audio); // L'elemento è invisibile ma riproduce l'audio
+        }
+        function init() {
+            console.log("Socket caricato:", socket.id);          // 1. Inizializza i listener per la lobby
+            // Collega i tasti
+            lobbyElementi.btnCrea.onclick = async () => {
+                await initAudio(); // Attiva microfono prima di creare
+                handleCreateRoom();
+            };
+            lobbyElementi.btnUnisciti.onclick = handleJoinRoomRequest;
+
+            lobbyElementi.btnConfermaCodice.onclick = async () => {
+                await initAudio(); // Attiva microfono prima di confermare il codice
+                handleConfirmCode();
+            };
+            lobbyElementi.btnAnnullaCodice.onclick = handleCancelCode;
+            const btnParla = document.getElementById('btn-parla');
+            if (btnParla) {
+                // Eventi Mouse (per PC)
+                btnParla.onmousedown = () => setMicrofono(true);
+                btnParla.onmouseup = () => setMicrofono(false);
+
+                // Eventi Touch (per Smartphone)
+                btnParla.ontouchstart = (e) => {
+                    if (e.cancelable) e.preventDefault(); // Evita menu contestuali
+                    setMicrofono(true);
+                };
+                btnParla.ontouchend = () => setMicrofono(false);
+            }
             // 2. Inizializza la connessione Socket.IO
             initializeWebSocket();
 
@@ -1010,8 +1160,27 @@
 
             console.log("Applicazione Gioco dell'Impostore (Multiplayer Client) avviata.");
         }
+        function setMicrofono(attivo) {
+            if (myStream) {
+                // Abilita o disabilita la traccia audio del tuo microfono
+                myStream.getAudioTracks()[0].enabled = attivo;
 
+                const btn = document.getElementById('btn-parla');
+                if (btn) {
+                    if (attivo) {
+                        btn.textContent = "TI STANNO SENTENDO...";
+                        btn.classList.replace('btn-audio-off', 'btn-audio-on');
+                    } else {
+                        btn.textContent = "TENI PREMUTO PER PARLARE";
+                        btn.classList.replace('btn-audio-on', 'btn-audio-off');
+                    }
+                }
+            } else {
+                console.warn("Microfono non ancora inizializzato.");
+            }
+        }
         document.addEventListener('DOMContentLoaded', init);
+
     </script>
 </body>
 
